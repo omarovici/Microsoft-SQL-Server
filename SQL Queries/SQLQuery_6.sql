@@ -1,210 +1,152 @@
 -- Part 01
--- Use ITI DB:
--- (1)
-CREATE VIEW V1 
-AS
-SELECT *
-FROM STUDENT
-WHERE St_Address IN ('Alex', 'Cairo')
 
-SELECT * FROM V1;
-
-UPDATE V1
-SET St_Address = 'Tanta'
-WHERE St_Address = 'Alex'
-
-SELECT * FROM V1;
-
--- use CompanySD32_DB:
-DROP VIEW v_dept
-
-CREATE VIEW v_dept 
-AS
-SELECT DeptNo , DeptName
-FROM DEPARTMENT
-
-SELECT * FROM v_dept
-
-INSERT INTO v_dept (DeptNo,DeptName)
-VALUES (4,'Development')
-
-DROP VIEW v_2006_check
-
-CREATE VIEW v_2006_check
-AS
-SELECT E.EMPNO , W.ProjectNo , W.Enter_Date
-FROM HR.EMPLOYEE E INNER JOIN Works_on W 
-ON E.EMPNO = W.EmpNo
-WHERE W.Enter_Date BETWEEN '2006-01-01' AND '2006-12-31'
-
-SELECT * FROM v_2006_check
-
--- Part 02
--- (1)
-CREATE PROC ShowStudentCountPerDept
-AS
-SELECT D.Dept_Name , COUNT(S.St_Id) AS NumberOfEmployees
-FROM STUDENT S INNER JOIN DEPARTMENT D
-ON S.DEPT_ID = D.DEPT_ID
-GROUP BY D.Dept_Name
-
-ShowStudentCountPerDept
-
---(2)
-CREATE PROC PROJECT100 
-AS
-BEGIN
-DECLARE @EMP INT
-SELECT @EMP = COUNT(E.SSN)
-FROM WORKS_FOR W INNER JOIN EMPLOYEE E
-ON W.ESSN = E.SSN
-WHERE W.Pno = 100
-IF @EMP >= 3
-BEGIN
-PRINT 'The number of employees in the project 100 is 3 or more'
-END
-ELSE
-BEGIN
-PRINT 'The following employees work for the project 100'
-SELECT E.Fname , E.Lname
-FROM Employee E INNER JOIN Works_for W 
-ON E.SSN = W.ESSN
-WHERE W.PNO = 100
-END
-END
-
---(3)
-CREATE PROC ReplaceOldEmp @OldEmp INT, @NewEmp INT, @Project INT
-AS
-UPDATE Works_for
-SET ESSN = @NewEmp 
-WHERE ESSN = @OldEmp AND PNO = @Project
-
-ReplaceOldEmp @OldEmp = 112233 , @NewEmp = 512463 , @Project = 500
-
--- Part 03
--- (1)
-CREATE PROC Range @FIRST INT , @LAST INT
-AS
-BEGIN
-DECLARE @SUM INT
-SET @Sum = (@FIRST + @LAST ) * (@LAST-@FIRST+1) /2
-SELECT @SUM AS GivenRange
-END
-
-Range @FIRST = 9 , @LAST = 15
-
--- (2)
-CREATE PROC CircleArea @RADIUS FLOAT
-AS
-BEGIN
-DECLARE @PI  FLOAT = 3.14159
-DECLARE @AREA FLOAT = @PI * @RADIUS * @RADIUS
-SELECT @AREA AS Area
-END
-
-CircleArea @RADIUS = 8
-
---(3)
-CREATE PROC AgeCategory @AGE INT
-AS
-BEGIN
-DECLARE @ANS VARCHAR(10) = 'Senior'
-IF @AGE < 18
-SET @ANS = 'Child'
-ELSE IF @AGE >= 18 AND @AGE < 60
-SET @ANS = 'Adult'
-SELECT @ANS AS AgeCategory
-END
-
-AgeCategory @AGE = 90
-
---(4)
-CREATE PROCEDURE MaxMinAvg @Num1 INT, @Num2 INT, @Num3 INT, @Num4 INT
-AS
-BEGIN
-DECLARE @MAX INT, @MIN INT, @AVG FLOAT
-SET @MAX = GREATEST(@Num1,@Num2,@Num3,@Num4)
-SET @MIN = LEAST(@Num1,@Num2,@Num3,@Num4)
-SET @AVG = (@Num1+@Num2+@Num3+@Num4)/4
-SELECT @Max AS Max, @Min AS Min, @Avg AS Average;
-END
-
-MaxMinAvg @Num1 = 1, @Num2 = 2, @Num3 = 3, @Num4 = 4
-
--- Part 04
--- (1)
-CREATE TABLE StudentAudit (
-  ServerUserName VARCHAR(50),
-  AudDate DATETIME,
-  Note VARCHAR(100)
+CREATE TABLE Department (
+  DeptNo VARCHAR(2) PRIMARY KEY,
+  DeptName VARCHAR(15) ,
+  Location VARCHAR(5) 
 )
 
-CREATE TRIGGER PrevInsertIntoDept
-ON DEPARTMENT
-AFTER INSERT
-AS
-PRINT 'cant insert a new record in that table'
+INSERT INTO Department
+VALUES ('d1', 'Research', 'NY'),
+('d2', 'Accounting', 'DS'),
+('d3', 'Marketing', 'KW')
 
-INSERT INTO Department (DEPT_ID,DEPT_NAME)
-VALUES (0987654321,'Ahmed')
+CREATE TABLE Employee (
+    EmpNo INT PRIMARY KEY,
+    EmpFname VARCHAR(20) NOT NULL,
+    EmpLname VARCHAR(20) NOT NULL,
+    DeptNo VARCHAR(2),
+    Salary INT,
+    CONSTRAINT DeptNo FOREIGN KEY (DeptNo) REFERENCES Department(DeptNo),
+    CONSTRAINT Salary UNIQUE (Salary)
+)
 
---(2)
-ALTER TRIGGER PrevStudentInsert
-ON STUDENT
-INSTEAD OF INSERT
+INSERT INTO Employee 
+VALUES (25348, 'Mathew', 'Smith', 'd3', 2500),
+(10102, 'Ann', 'Jones', 'd3', 3000),
+(18316, 'John', 'Barrymore', 'd1', 2400),
+(29346, 'James', 'James', 'd2', 2800),
+(9031, 'Lisa', 'Bertoni', 'd2', 4000),
+(2581, 'Elisa', 'Hansel', 'd2', 3600),
+(28559, 'Sybl', 'Moser', 'd1', 2900)
+
+INSERT INTO Project
+VALUES ('p1', 'Apollo', 120000),
+('p2', 'Gemini', 95000),
+('p3', 'Mercury', 185600)
+
+INSERT INTO Works_on (EmpNo, ProjectNo, Job, Enter_Date) 
+VALUES (10102, 'p1', 'Analyst', '2006-10-01'),
+(10102, 'p3', 'Manager', '2012-01-01'),
+(25348, 'p2', 'Clerk', '2007-02-15'),
+(18316, 'p2', NULL, '2007-06-01'),
+(29346, 'p2', NULL, '2006-12-15'),
+(2581, 'p3', 'Analyst', '2007-10-15'),
+(9031, 'p1', 'Manager', '2007-04-15'),
+(28559, 'p1', NULL, '2007-08-01'),
+(28559, 'p2', 'Clerk', '2012-02-01'),
+(9031, 'p3', 'Clerk', '2006-11-15'),
+(29346, 'p1', 'Clerk', '2007-01-04')
+
+INSERT INTO Works_on
+VALUES (11111, 'p1', 'Clerk', '2007-01-01')
+-- 1111 is not in employee table
+
+UPDATE Works_on
+SET EmpNo = 11111
+WHERE EmpNo = 10102
+-- 1111 is not in employee table so its not inserted in Works_on
+
+UPDATE Employee
+SET EmpNo = 22222
+WHERE EmpNo = 10102
+-- EmpNo 10102 is in the Works_on
+
+DELETE FROM Employee
+WHERE EmpNo = 10102
+-- This is in works on so that we can't delete it
+
+ALTER TABLE Employee
+ADD TelephoneNumber VARCHAR(10)
+
+ALTER TABLE Employee
+DROP COLUMN TelephoneNumber
+
+CREATE SCHEMA Company
+CREATE SCHEMA HumanResource
+
+ALTER SCHEMA Company
+TRANSFER dbo.Department
+
+ALTER SCHEMA Company
+TRANSFER dbo.Project
+
+ALTER SCHEMA HumanResource
+TRANSFER dbo.Employee
+
+UPDATE Company.Project
+SET Budget = Budget * 1.10
+FROM Company.Project
+JOIN dbo.Works_on ON Company.Project.ProjectNo = dbo.Works_on.ProjectNo
+WHERE dbo.Works_on.EmpNo = 10102 AND dbo.Works_on.Job = 'Manager'
+
+UPDATE Company.Department
+SET DeptName = 'Sales'
+WHERE DeptNo = (SELECT DeptNo FROM HumanResource.Employee WHERE EmpFname = 'James')
+
+UPDATE Works_on
+SET Enter_Date = '2007-12-12'
+WHERE ProjectNo = 'p1' AND EmpNo IN (SELECT EmpNo FROM HumanResource.Employee WHERE DeptNo = (SELECT DeptNo FROM Company.Department WHERE DeptName = 'Sales'))
+
+DELETE FROM Works_on
+WHERE EmpNo IN (SELECT EmpNo FROM HumanResource.Employee WHERE DeptNo = (SELECT DeptNo FROM Company.Department WHERE Location = 'KW'))
+
+-- Part 02
+
+CREATE TABLE Audit (
+    ProjectNo CHAR(2),
+    UserName VARCHAR(20),
+    ModifiedDate DATE,
+    Budget_Old INT,
+    Budget_New INT
+)
+
+CREATE TRIGGER BudgetAudit
+ON hr.Project
+AFTER UPDATE
 AS
 BEGIN
-
+IF UPDATE(Budget)
+BEGIN
+DECLARE @ProjectNo CHAR(2)
 DECLARE @UserName VARCHAR(20)
-DECLARE @StudentId INT
-DECLARE @Note VARCHAR(150)
-DECLARE @Date DATETIME
-
-SET @UserName = SUSER_NAME()
-SET @Date = GETDATE()
-SELECT TOP 1 @StudentId = i.St_Id FROM INSERTED i
-SET @Note = @UserName + ' Inserted New Row with Key = ' + CAST(@StudentId AS VARCHAR(10)) + ' in table Student'
-INSERT INTO StudentAudit (ServerUserName, AudDate, Note)
-VALUES (@UserName, @Date, @Note)
+DECLARE @ModifiedDate DATE
+DECLARE @Budget_Old INT
+DECLARE @Budget_New INT
+SELECT @ProjectNo = inserted.ProjectNo,
+@UserName = SYSTEM_USER,
+@ModifiedDate = GETDATE(),
+@Budget_Old = deleted.Budget,
+@Budget_New = inserted.Budget
+FROM inserted
+JOIN deleted ON inserted.ProjectNo = deleted.ProjectNo
+INSERT INTO Audit (ProjectNo, UserName, ModifiedDate, Budget_Old, Budget_New)
+VALUES (@ProjectNo, @UserName, @ModifiedDate, @Budget_Old, @Budget_New)
+END
 END
 
-INSERT INTO STUDENT (ST_FNAME,ST_ID)
-VALUES('Omar',122300)
+UPDATE hr.Project
+SET Budget = 200000
+WHERE ProjectNo = 2;
 
---(3)
-CREATE TRIGGER DelStudent
-ON STUDENT
-INSTEAD OF DELETE
-AS
-BEGIN
-DECLARE @UserName VARCHAR(20)
-DECLARE @StudentId INT
-DECLARE @Date DATETIME
-SET @Date = GETDATE()
-DECLARE @Note VARCHAR(100)
-SET @UserName = SUSER_NAME()
-SELECT TOP 1 @StudentId = d.St_Id FROM DELETED d
-SET @Note = 'Tried to Delete Row with Id = '+ CAST(@StudentId AS VARCHAR(10))
-INSERT INTO StudentAudit (ServerUserName, AudDate, Note)
-VALUES (@UserName, @Date, @Note)
-END
 
-DELETE FROM Student
-WHERE St_Id = 122300
+SELECT * FROM Audit
 
---(4)
-ALTER TRIGGER MarchEmp
-ON Employee
-INSTEAD OF INSERT
-AS
-BEGIN
-IF MONTH(GETDATE()) = 6
-Print 'Invalid Insert in march'
-ELSE
-INSERT INTO Employee
-SELECT * FROM inserted
-END
+-- Part 03
 
-INSERT INTO Employee (SSN, Fname, Lname)
-VALUES (500100,'Hello','World')
+CREATE CLUSTERED INDEX DeptHiredate ON Department(Manager_hiredate)
+-- Cannot create more than one clustered index on table 'Department'. Drop the existing clustered index 'PK_Department' before creating another.
+-- Cannot create more than 1 cluster in a table
+
+CREATE UNIQUE INDEX UQ_Student_Age ON Student(st_Age)
+-- can't create that becase there are dublicates ages null is 11 times and 22 is 5 times

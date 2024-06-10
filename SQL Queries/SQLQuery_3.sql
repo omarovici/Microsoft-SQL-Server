@@ -1,140 +1,97 @@
-CREATE FUNCTION GetStudentDaneBasedOnFormat(@format VARCHAR(20))
-RETURNS @StudentTable TABLE 
-(
-    STUDENTID INT ,
-    STUDENTNAME VARCHAR(30)
-)
-AS 
-BEGIN
-IF @format = 'FIRST'
-INSERT INTO @StudentTable
-SELECT St_Id,St_Fname
-FROM STUDENT
-ELSE IF @format = 'LAST'
-INSERT INTO @StudentTable
-SELECT St_Id,St_Lname
-FROM STUDENT
-ELSE IF @format = 'FULL'
-INSERT INTO @StudentTable
-SELECT St_Id,CONCAT(St_Fname,' ',St_Lname)
-FROM STUDENT
-RETURN
-END
+-- Part 01
+-- Use ITI DB
+-- (1)
+SELECT *
+FROM Instructor
+WHERE Salary < (SELECT AVG(Salary) FROM Instructor)
+-- (2)
+SELECT TOP(1) D.Dept_Name AS DepartmentDame
+FROM Instructor I JOIN Department D ON I.Dept_Id = D.Dept_Id 
+WHERE I.SALARY IS NOT NULL
+ORDER BY I.Salary
+-- (3)
+SELECT TOP(2) Salary AS MaxTowSalaries
+FROM Instructor
+WHERE SALARY IS NOT NULL
+ORDER BY Salary DESC
+-- (4)
+SELECT Dept_Name, Salary 
+FROM (SELECT D.Dept_Name , I.SALARY , RANK() OVER(PARTITION BY D.Dept_Name ORDER BY I.SALARY DESC) AS SALARY1
+FROM Instructor I JOIN Department D ON I.Dept_Id = D.Dept_Id 
+WHERE I.SALARY IS NOT NULL ) AS NEWTABLE
+WHERE SALARY1 <= 2
+ORDER BY Dept_Name, SALARY1;
+-- (5)
+SELECT Dept_Name , St_Id , CONCAT (St_Fname,' ',ST_Lname) AS FullName
+FROM (SELECT D.Dept_Name , S.St_Id , S.St_Fname ,ST_Lname, RANK() OVER(PARTITION BY D.DEPT_ID ORDER BY NEWID()) AS RAND
+FROM STUDENT S JOIN Department D ON S.Dept_Id = D.Dept_Id 
+) AS NEWTABLE
+WHERE RAND <= 1
 
-SELECT * FROM GetStudentDaneBasedOnFormat('First')
+-- Use MyCompany DB
+-- (1)
+Select TOP(1)D.*
+FROM Employee E JOIN Departments D
+ON E.Dno = D.Dnum 
+ORDER BY E.SSN 
+-- (2)
+SELECT E.Lname
+FROM DEPARTMENTS D INNER JOIN Employee E
+ON D.MGRSSN = E.SSN LEFT JOIN Dependent DE
+ON DE.ESSN = E.SSN
+WHERE DE.ESSN IS NULL
+-- (3)
+SELECT D.Dname , D.Dnum , COUNT(E.SSN) AS EmployeeCount
+FROM Departments D JOIN Employee E 
+ON D.Dnum = E.Dno
+GROUP BY D.Dname , D.Dnum 
+HAVING AVG(E.Salary) < (SELECT AVG(SALARY) FROM Employee)
+-- (4)
+SELECT TOP(2) SALARY
+FROM (SELECT SALARY FROM Employee) AS EmployeeSalary
+WHERE SALARY IS NOT NULL
+ORDER BY SALARY DESC
+-- (5)
+SELECT DISTINCT E.*
+FROM Employee E LEFT JOIN Dependent DE
+ON DE.ESSN = E.SSN
+WHERE EXISTS (SELECT ESSN FROM Dependent WHERE DE.ESSN IS NOT NULL)
 
---==============================================================
-ALTER FUNCTION GetStudentsLocationReturnDepartName
-(@Location VARCHAR(20))
-RETURNS @StudentTableDep TABLE 
-(
-    StudentN VARCHAR(100),
-    DepartmentN VARCHAR(100)
-)
-AS
-BEGIN
-    INSERT INTO @StudentTableDep
-    SELECT s.St_Fname, d.Dept_Name
-    FROM STUDENT s
-    INNER JOIN DEPARTMENT d ON s.Dept_Id = d.Dept_Id
-    WHERE s.St_Address = @Location
-    RETURN
-END
 
-SELECT * FROM GetStudentsLocationReturnDepartName('Cairo')
-
---==============================================================
-
-CREATE VIEW CairoStudentsView
-as 
-SELECT St_Id , St_Fname , St_Age , St_Address
-FROM Student
-WHERE St_Address = 'Cairo'
+-- Part 02
+-- (1)
+SELECT SALESORDERID, SHIPDATE
+FROM SALES.SalesOrderHeader
+WHERE SHIPDATE >= '2002-07-28' AND SHIPDATE < '2014-07-29'
+-- (2)
+SELECT STANDARDCOST , PRODUCTID , NAME 
+FROM Production.Product
+WHERE STANDARDCOST < 110.00
+-- (3)
+SELECT PRODUCTID , NAME , WEIGHT
+FROM Production.Product
+WHERE WEIGHT IS NULL
+-- (4)
+SELECT *
+FROM Production.Product
+WHERE COLOR = 'SILVER' OR COLOR = 'RED' OR COLOR = 'BLACK'
+-- (5)
+SELECT *
+FROM Production.Product
+WHERE NAME LIKE 'B%'
+-- (6)
+UPDATE Production.ProductDescription
+SET Description = 'Chromoly steel_High of defects'
+WHERE ProductDescriptionID = 3
 
 SELECT *
-FROM CairoStudentsView
-
-
-CREATE VIEW AlexStudentsView
-as 
-SELECT St_Id , St_Fname , St_Age , St_Address
-FROM Student
-WHERE St_Address = 'ALEX'
-
-SELECT *
-FROM AlexStudentsView
-
-
-CREATE VIEW CairoAndAlex
-as 
-SELECT * FROM AlexStudentsView
-UNION ALL
-SELECT * FROM CairoStudentsView
-
-SELECT * FROM CairoAndAlex
-
-ALTER VIEW StudenInfoView (STUDENTID , STUDENTNAME , DEPARTMENTID , DEPARTMENTNAME)
-WITH ENCRYPTION
-AS 
-SELECT S.St_Id , S.St_Fname , D.Dept_Id , D.Dept_Name
-FROM Student S JOIN Department D 
-ON D.Dept_Id = S.Dept_Id
-
-SELECT * FROM StudenInfoView
-
-SP_HELPTEXT 'StudenInfoView'
-
-CREATE VIEW CairoAndAlexStudentsGRADEView
-WITH ENCRYPTION
-AS 
-SELECT CA.St_Fname , C.Crs_Name , SC.Grade
-FROM CairoAndAlex CA , Stud_Course SC , Course C 
-WHERE CA.St_Id = SC.St_Id AND C.Crs_Id = SC.Crs_Id
-
-SELECT * FROM CairoAndAlexStudentsGRADEView
-
-ALTER VIEW CairoStudentsView(id , name , age , address)
-as 
-SELECT St_Id , St_Fname , St_Age , St_Address
-FROM Student
-WHERE St_Address = 'Cairo'
-
-SELECT *
-FROM CairoStudentsView
-
-INSERT INTO CairoStudentsView 
-VALUES (124,'Ahmed',22,'Alex')
---==============================================================
---==============================================================
---==============================================================
-
-ALTER VIEW StudenInfoView (STUDENTID , STUDENTNAME , DEPARTMENTID , DEPARTMENTNAME)
-WITH ENCRYPTION
-AS 
-SELECT S.St_Id , S.St_Fname , S.Dept_Id , D.Dept_Name
-FROM Student S LEFT JOIN Department D 
-ON D.Dept_Id = S.Dept_Id
-
-SELECT * FROM StudenInfoView
-
-INSERT INTO StudenInfoView (STUDENTID , STUDENTNAME)
-VALUES (451,'Ali')
-
-UPDATE StudenInfoView
-SET DEPARTMENTID = 20 
-WHERE STUDENTID = 451
-
-
-ALTER VIEW CairoStudentsView(id,name,age,address)
-WITH ENCRYPTION
-as 
-SELECT St_Id , St_Fname , St_Age , St_Address
-FROM Student
-WHERE St_Address = 'Cairo'
-WITH CHECK OPTION
-
-INSERT INTO CairoStudentsView 
-VALUES (666,'Omar',19,'Cairo')
-
-SELECT *
-FROM CairoStudentsView
+FROM Production.ProductDescription
+WHERE Description LIKE '%_%'
+-- (7)
+SELECT DISTINCT HireDate
+FROM HumanResources.Employee
+--(8)
+SELECT CONCAT('The ', Name, ' is only! ', ListPrice) AS Product
+FROM Production.Product
+WHERE ListPrice >= 100.00 AND ListPrice < 120.00
+ORDER BY ListPrice

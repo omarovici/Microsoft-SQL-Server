@@ -1,248 +1,210 @@
--- Part 01 (Functions)
--- 1. Create a scalar function that takes a date and returns the Month name of that date. 
-CREATE FUNCTION ReturnMonth(@Date date)
-returns VARCHAR(15)
-BEGIN
-DECLARE @MON VARCHAR(15)
-SET @MON = DATENAME(MONTH,@Date)
-RETURN @MON
-END
-
-SELECT DBO.ReturnMonth('9-11-2001') AS MonthName
-
--- 2. Create a scalar function that takes 2 integers and returns the values between them.
---    Example Function(1 , 5) output : 2 , 3 , 4
-ALTER FUNCTION NumbersBetweenThem(@first int , @second int)
-RETURNS VARCHAR(50)
-BEGIN
-DECLARE @ANS VARCHAR(50) = ''
-DECLARE @CNT INT = @FIRST + 1
-WHILE @CNT < @second
-BEGIN
-IF @ANS = ''
-SET @ANS = CAST(@CNT AS VARCHAR);
-ELSE
-SET @ANS = CONCAT(@ANS, ' , ', CAST(@CNT AS VARCHAR)); 
-SET @CNT = @CNT + 1;
-END
-RETURN @ANS
-END
-
-SELECT DBO.NumbersBetweenThem(0,3) AS NumbersBetweenThem
-
--- 3. Create a table-valued function that takes Student Number and returns 
---    Department Name with Student full name.
-ALTER FUNCTION ReturnDeptFullName(@StudentId int)
-RETURNS TABLE
-AS
-RETURN (
-    SELECT D.Dept_Name , CONCAT(S.St_Fname,' ',S.St_Lname) AS FullName
-    FROM Department D INNER JOIN Student S 
-    ON D.Dept_Id = S.Dept_Id
-    WHERE @StudentId = S.St_Id
-)
-
-SELECT *
-FROM DBO.ReturnDeptFullName(9)
-
--- 4.	a scalar function that takes Student ID and returns a message to user 
--- a.	If first name and Last name are null then display 'First name & last Create name are null'
--- b.	If First name is null then display 'first name is null'
--- c.	If Last name is null then display 'last name is null'
--- d.	Else display 'First name & last name are not null'
-
-CREATE FUNCTION ReturnNull(@StudentId int)
-RETURNS VARCHAR(50)
-BEGIN
-DECLARE @MESSAGE VARCHAR(50) = 'First name & last name are not null'
-DECLARE @FNAME VARCHAR(50)
-DECLARE @LNAME VARCHAR(50)
-SELECT @FNAME = St_Fname , @LNAME = St_Lname
-FROM Student
-WHERE @StudentId = St_Id
-IF @FNAME IS NULL AND @LNAME IS NULL 
-SET @MESSAGE = 'First name & last Create name are null'
-ELSE IF @FNAME IS NULL 
-SET @MESSAGE = 'first name is null'
-ELSE IF @LNAME IS NULL
-SET @MESSAGE = 'last name is null'
-RETURN @MESSAGE
-END
-
-SELECT DBO.ReturnNull(13) AS MESSAGE
-
--- 5.Create a function that takes an integer which represents the format of the Manager hiring date and displays department name,
---   Manager Name and hiring date with this format.   
-
--- Note : I did't get the question
-
--- 6.	Create multi-statement table-valued function that takes a string
--- a.	If string='first name' returns student first name
--- b.	If string='last name' returns student last name 
--- c.	If string='full name' returns Full Name from student table  (Note: Use “ISNULL” function)
-CREATE FUNCTION StudentINF(@format varchar)
-RETURNS @StudentTable TABLE
-(
-StudentId int,
-StudntName varchar(30)
-)
-AS
-BEGIN
-IF @format = 'first'
-INSERT INTO @StudentTable
-SELECT St_Id,St_Fname
-FROM Student
-ELSE IF @format = 'last'
-INSERT INTO @StudentTable
-SELECT St_Id,St_Lname
-FROM Student
-ELSE IF @format = 'full'
-INSERT INTO @StudentTable
-SELECT St_Id,CONCAT(St_Fname, ' ', St_Lname)
-FROM Student
-RETURN
-END
-
-SELECT *
-FROM DBO.StudentINF('FULL')
-
--- 7. Create function that takes project number and display all employees in this project (Use MyCompany DB)
-CREATE FUNCTION GetEmpByPNO(@ProjectNum int)
-RETURNS TABLE
-AS
-RETURN (
-    SELECT E.*
-    FROM EMPLOYEE E INNER JOIN WORKS_FOR W 
-    ON E.SSN = W.ESSn
-    WHERE @ProjectNum = PNO
-)
-
-SELECT * FROM GetEmpByPNO(100)
-
--- Part 02 (Views)
+-- Part 01
 -- Use ITI DB:
--- 1. Create a view that displays the student's full name, course name if the student has a grade more than 50. 
-CREATE VIEW StudentView AS
-SELECT CONCAT(S.St_Fname,' ',S.St_Lname) AS FullName , C.Crs_Name
-FROM STUDENT S INNER JOIN Stud_Course SC 
-ON S.St_Id = SC.St_Id INNER JOIN Course C 
-ON SC.Crs_Id = C.Crs_Id 
-WHERE SC.Grade > 50
-
-SELECT * FROM StudentView
-
--- 2. Create an Encrypted view that displays manager names and the topics they teach.
-ALTER VIEW ManTopic
-WITH ENCRYPTION 
+-- (1)
+CREATE VIEW V1 
 AS
-SELECT DISTINCT I.Ins_Name , T.Top_Name
-FROM Instructor I INNER JOIN Ins_Course IC
-ON I.Ins_Id = IC.Ins_Id INNER JOIN Course C 
-ON C.Crs_Id = IC.Crs_Id INNER JOIN Topic T 
-ON T.Top_Id = C.Top_Id
+SELECT *
+FROM STUDENT
+WHERE St_Address IN ('Alex', 'Cairo')
 
-SELECT * FROM ManTopic
+SELECT * FROM V1;
 
--- 3. Create a view that will display Instructor Name, Department Name for the ‘SD’ or ‘Java’ Department
---    “use Schema binding” and describe what is the meaning of Schema Binding
--- The SCHEMABINDING option in SQL Server ensures that the view is bound to the schema of the underlying tables.
-CREATE VIEW InsDep WITH SCHEMABINDING 
-AS
-SELECT I.Ins_Name,D.Dept_Name
-FROM DBO.Instructor I JOIN DBO.Department D 
-ON I.Dept_Id = D.Dept_Id
-WHERE D.Dept_Name IN ('SD', 'Java')
+UPDATE V1
+SET St_Address = 'Tanta'
+WHERE St_Address = 'Alex'
 
-SELECT * FROM InsDep
-
--- 4. Create a view that will display the project name and the number of employees working on it. (Use Company DB)
-CREATE VIEW DisplayNumberOfEmp 
-AS
-SELECT P.Pname , COUNT(E.SSN) AS NumberOfEmployees
-FROM EMPLOYEE E INNER JOIN Works_for W
-ON E.SSN = W.ESSn INNER JOIN Project P 
-ON W.Pno = P.Pnumber
-GROUP BY P.Pname
-
-SELECT * FROM DisplayNumberOfEmp
+SELECT * FROM V1;
 
 -- use CompanySD32_DB:
--- 1. Create a view named   “v_clerk” that will display employee Number ,project Number, the date of hiring of all the jobs of the type 'Clerk'.
-DROP VIEW v_clerk
-
-CREATE VIEW v_clerk 
-AS
-SELECT EmpNo, ProjectNo, Enter_Date
-FROM Works_on
-WHERE Job = 'Clerk'
-
-SELECT * FROM v_clerk
- -- 2. Create view named  “v_without_budget” that will display all the projects data without budget
-DROP view v_without_budget 
-
-CREATE VIEW v_without_budget 
-AS
-SELECT ProjectNo , ProjectName
-FROM hr.Project
-WHERE Budget IS NULL
-
-SELECT * FROM v_without_budget
-
--- 3. Create view named  “v_count “ that will display the project name and the Number of jobs in i
-DROP VIEW v_count
-
-CREATE VIEW v_count 
-AS
-SELECT P.ProjectName, COUNT(W.Job) AS NumberOfJobs
-FROM hr.Project P JOIN Works_on W ON P.ProjectNo = W.ProjectNo
-GROUP BY P.ProjectName
-
-SELECT * FROM v_count
-
--- 4. Create view named ” v_project_p2” that will display the emp# s for the project# ‘p2’ . (use the previously created view  “v_clerk”)
-DROP view v_project_p2 
-
-CREATE VIEW v_project_p2 
-AS
-SELECT EmpNo
-FROM v_clerk
-WHERE ProjectNo = 'p2'
-
-SELECT * FROM v_project_p2
-
--- 5. modify the view named  “v_without_budget”  to display all DATA in project p1 and p2.
-DROP VIEW v_without_budget
-
-ALTER VIEW v_without_budget AS
-SELECT *
-FROM hr.Project
-WHERE ProjectNo = 'P1' OR ProjectNo = 'P2'
-
-SELECT * FROM v_without_budget
-
--- 6. Delete the views  “v_ clerk” and “v_count”
-DROP VIEW v_clerk
-DROP VIEW v_count
-
--- 7. Create view that will display the emp# and emp last name who works on deptNumber is ‘d2’
-CREATE VIEW v_emp_d2 AS
-SELECT E.EmpNo, E.EmpLname
-FROM hr.Employee E
-WHERE E.DeptNo = '2'
-
-SELECT * FROM v_emp_d2
-
--- 8. Display the employee  lastname that contains letter “J” (Use the previous view created in Q#7)
-SELECT EmpLname
-FROM dbo.v_emp_d2
-WHERE EmpLname LIKE '%J%';
-
--- 9. Create view named “v_dept” that will display the department# and department name
 DROP VIEW v_dept
 
 CREATE VIEW v_dept 
 AS
 SELECT DeptNo , DeptName
-FROM Department
+FROM DEPARTMENT
 
 SELECT * FROM v_dept
+
+INSERT INTO v_dept (DeptNo,DeptName)
+VALUES (4,'Development')
+
+DROP VIEW v_2006_check
+
+CREATE VIEW v_2006_check
+AS
+SELECT E.EMPNO , W.ProjectNo , W.Enter_Date
+FROM HR.EMPLOYEE E INNER JOIN Works_on W 
+ON E.EMPNO = W.EmpNo
+WHERE W.Enter_Date BETWEEN '2006-01-01' AND '2006-12-31'
+
+SELECT * FROM v_2006_check
+
+-- Part 02
+-- (1)
+CREATE PROC ShowStudentCountPerDept
+AS
+SELECT D.Dept_Name , COUNT(S.St_Id) AS NumberOfEmployees
+FROM STUDENT S INNER JOIN DEPARTMENT D
+ON S.DEPT_ID = D.DEPT_ID
+GROUP BY D.Dept_Name
+
+ShowStudentCountPerDept
+
+--(2)
+CREATE PROC PROJECT100 
+AS
+BEGIN
+DECLARE @EMP INT
+SELECT @EMP = COUNT(E.SSN)
+FROM WORKS_FOR W INNER JOIN EMPLOYEE E
+ON W.ESSN = E.SSN
+WHERE W.Pno = 100
+IF @EMP >= 3
+BEGIN
+PRINT 'The number of employees in the project 100 is 3 or more'
+END
+ELSE
+BEGIN
+PRINT 'The following employees work for the project 100'
+SELECT E.Fname , E.Lname
+FROM Employee E INNER JOIN Works_for W 
+ON E.SSN = W.ESSN
+WHERE W.PNO = 100
+END
+END
+
+--(3)
+CREATE PROC ReplaceOldEmp @OldEmp INT, @NewEmp INT, @Project INT
+AS
+UPDATE Works_for
+SET ESSN = @NewEmp 
+WHERE ESSN = @OldEmp AND PNO = @Project
+
+ReplaceOldEmp @OldEmp = 112233 , @NewEmp = 512463 , @Project = 500
+
+-- Part 03
+-- (1)
+CREATE PROC Range @FIRST INT , @LAST INT
+AS
+BEGIN
+DECLARE @SUM INT
+SET @Sum = (@FIRST + @LAST ) * (@LAST-@FIRST+1) /2
+SELECT @SUM AS GivenRange
+END
+
+Range @FIRST = 9 , @LAST = 15
+
+-- (2)
+CREATE PROC CircleArea @RADIUS FLOAT
+AS
+BEGIN
+DECLARE @PI  FLOAT = 3.14159
+DECLARE @AREA FLOAT = @PI * @RADIUS * @RADIUS
+SELECT @AREA AS Area
+END
+
+CircleArea @RADIUS = 8
+
+--(3)
+CREATE PROC AgeCategory @AGE INT
+AS
+BEGIN
+DECLARE @ANS VARCHAR(10) = 'Senior'
+IF @AGE < 18
+SET @ANS = 'Child'
+ELSE IF @AGE >= 18 AND @AGE < 60
+SET @ANS = 'Adult'
+SELECT @ANS AS AgeCategory
+END
+
+AgeCategory @AGE = 90
+
+--(4)
+CREATE PROCEDURE MaxMinAvg @Num1 INT, @Num2 INT, @Num3 INT, @Num4 INT
+AS
+BEGIN
+DECLARE @MAX INT, @MIN INT, @AVG FLOAT
+SET @MAX = GREATEST(@Num1,@Num2,@Num3,@Num4)
+SET @MIN = LEAST(@Num1,@Num2,@Num3,@Num4)
+SET @AVG = (@Num1+@Num2+@Num3+@Num4)/4
+SELECT @Max AS Max, @Min AS Min, @Avg AS Average;
+END
+
+MaxMinAvg @Num1 = 1, @Num2 = 2, @Num3 = 3, @Num4 = 4
+
+-- Part 04
+-- (1)
+CREATE TABLE StudentAudit (
+  ServerUserName VARCHAR(50),
+  AudDate DATETIME,
+  Note VARCHAR(100)
+)
+
+CREATE TRIGGER PrevInsertIntoDept
+ON DEPARTMENT
+AFTER INSERT
+AS
+PRINT 'cant insert a new record in that table'
+
+INSERT INTO Department (DEPT_ID,DEPT_NAME)
+VALUES (0987654321,'Ahmed')
+
+--(2)
+ALTER TRIGGER PrevStudentInsert
+ON STUDENT
+INSTEAD OF INSERT
+AS
+BEGIN
+
+DECLARE @UserName VARCHAR(20)
+DECLARE @StudentId INT
+DECLARE @Note VARCHAR(150)
+DECLARE @Date DATETIME
+
+SET @UserName = SUSER_NAME()
+SET @Date = GETDATE()
+SELECT TOP 1 @StudentId = i.St_Id FROM INSERTED i
+SET @Note = @UserName + ' Inserted New Row with Key = ' + CAST(@StudentId AS VARCHAR(10)) + ' in table Student'
+INSERT INTO StudentAudit (ServerUserName, AudDate, Note)
+VALUES (@UserName, @Date, @Note)
+END
+
+INSERT INTO STUDENT (ST_FNAME,ST_ID)
+VALUES('Omar',122300)
+
+--(3)
+CREATE TRIGGER DelStudent
+ON STUDENT
+INSTEAD OF DELETE
+AS
+BEGIN
+DECLARE @UserName VARCHAR(20)
+DECLARE @StudentId INT
+DECLARE @Date DATETIME
+SET @Date = GETDATE()
+DECLARE @Note VARCHAR(100)
+SET @UserName = SUSER_NAME()
+SELECT TOP 1 @StudentId = d.St_Id FROM DELETED d
+SET @Note = 'Tried to Delete Row with Id = '+ CAST(@StudentId AS VARCHAR(10))
+INSERT INTO StudentAudit (ServerUserName, AudDate, Note)
+VALUES (@UserName, @Date, @Note)
+END
+
+DELETE FROM Student
+WHERE St_Id = 122300
+
+--(4)
+ALTER TRIGGER MarchEmp
+ON Employee
+INSTEAD OF INSERT
+AS
+BEGIN
+IF MONTH(GETDATE()) = 6
+Print 'Invalid Insert in march'
+ELSE
+INSERT INTO Employee
+SELECT * FROM inserted
+END
+
+INSERT INTO Employee (SSN, Fname, Lname)
+VALUES (500100,'Hello','World')
