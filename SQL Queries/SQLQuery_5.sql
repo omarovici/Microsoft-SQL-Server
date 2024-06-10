@@ -1,6 +1,11 @@
 -- Part 01
 -- Use ITI DB:
--- (1)
+-- Create a view “V1” that displays student data for students who live in Alex
+-- or Cairo.
+-- Note: Prevent the users to run the following query
+-- Update V1 set st_address=’tanta’
+-- Where st_address=’alex’;
+
 CREATE VIEW V1 
 AS
 SELECT *
@@ -16,6 +21,8 @@ WHERE St_Address = 'Alex'
 SELECT * FROM V1;
 
 -- use CompanySD32_DB:
+-- Create view named “v_dept” that will display the department# and department name
+
 DROP VIEW v_dept
 
 CREATE VIEW v_dept 
@@ -23,10 +30,17 @@ AS
 SELECT DeptNo , DeptName
 FROM DEPARTMENT
 
+-- using the previous view try enter new department data where dept# is ’d4’ and dept name is ‘Development’
+
 SELECT * FROM v_dept
 
 INSERT INTO v_dept (DeptNo,DeptName)
 VALUES (4,'Development')
+
+-- Create view name “v_2006_check” that will display employee Number, the project Number where he works and the date of joining the project which must be from the first of
+-- January and the last of December 2006.this view will be
+-- used to insert data so make sure that the coming new data must match the condition
+
 
 DROP VIEW v_2006_check
 
@@ -40,7 +54,7 @@ WHERE W.Enter_Date BETWEEN '2006-01-01' AND '2006-12-31'
 SELECT * FROM v_2006_check
 
 -- Part 02
--- (1)
+-- Create a stored procedure to show the number of students per department.[use ITI DB] 
 CREATE PROC ShowStudentCountPerDept
 AS
 SELECT D.Dept_Name , COUNT(S.St_Id) AS NumberOfEmployees
@@ -50,7 +64,7 @@ GROUP BY D.Dept_Name
 
 ShowStudentCountPerDept
 
---(2)
+-- Create a stored procedure that will check for the Number of employees in the project 100 if they are more than 3 print message to the user “'The number of employees in the project 100 is 3 or more'” if they are less display a message to the user “'The following employees work for the project 100'” in addition to the first name and last name of each one. [MyCompany DB]
 CREATE PROC PROJECT100 
 AS
 BEGIN
@@ -73,7 +87,8 @@ WHERE W.PNO = 100
 END
 END
 
---(3)
+-- Create a stored procedure that will be used in case an old employee has left the project and a new one becomes his replacement. The procedure should take 3 parameters (old Emp. number, new Emp. number and the project number) and it will be used to update works_on table. [MyCompany DB]
+
 CREATE PROC ReplaceOldEmp @OldEmp INT, @NewEmp INT, @Project INT
 AS
 UPDATE Works_for
@@ -83,7 +98,7 @@ WHERE ESSN = @OldEmp AND PNO = @Project
 ReplaceOldEmp @OldEmp = 112233 , @NewEmp = 512463 , @Project = 500
 
 -- Part 03
--- (1)
+-- Create a stored procedure that calculates the sum of a given range of numbers
 CREATE PROC Range @FIRST INT , @LAST INT
 AS
 BEGIN
@@ -94,7 +109,8 @@ END
 
 Range @FIRST = 9 , @LAST = 15
 
--- (2)
+-- Create a stored procedure that calculates the area of a circle given its radius
+
 CREATE PROC CircleArea @RADIUS FLOAT
 AS
 BEGIN
@@ -105,7 +121,8 @@ END
 
 CircleArea @RADIUS = 8
 
---(3)
+-- Create a stored procedure that calculates the age category based on a person's age ( Note: IF Age < 18 then Category is Child and if Age >= 18 AND Age < 60 then Category is Adult otherwise Category is Senior)
+
 CREATE PROC AgeCategory @AGE INT
 AS
 BEGIN
@@ -119,7 +136,8 @@ END
 
 AgeCategory @AGE = 90
 
---(4)
+-- Create a stored procedure that determines the maximum, minimum, and average of a given set of numbers ( Note : set of numbers as Numbers = '5, 10, 15, 20, 25')
+
 CREATE PROCEDURE MaxMinAvg @Num1 INT, @Num2 INT, @Num3 INT, @Num4 INT
 AS
 BEGIN
@@ -133,7 +151,8 @@ END
 MaxMinAvg @Num1 = 1, @Num2 = 2, @Num3 = 3, @Num4 = 4
 
 -- Part 04
--- (1)
+-- Create a trigger to prevent anyone from inserting a new record in the Department table ( Display a message for user to tell him that he can’t insert a new record in that table ) Create a table named “StudentAudit”. Its Columns are (Server User Name , Date, Note)
+
 CREATE TABLE StudentAudit (
   ServerUserName VARCHAR(50),
   AudDate DATETIME,
@@ -149,7 +168,12 @@ PRINT 'cant insert a new record in that table'
 INSERT INTO Department (DEPT_ID,DEPT_NAME)
 VALUES (0987654321,'Ahmed')
 
---(2)
+-- Create a trigger on student table after insert to add Row in StudentAudit table
+-- • The Name of User Has Inserted the New Student
+-- • Date
+-- • Note that will be like ([username] Insert New Row with Key = [Student Id] in table [table name
+
+
 ALTER TRIGGER PrevStudentInsert
 ON STUDENT
 INSTEAD OF INSERT
@@ -172,7 +196,10 @@ END
 INSERT INTO STUDENT (ST_FNAME,ST_ID)
 VALUES('Omar',122300)
 
---(3)
+--  Create a trigger on student table instead of delete to add Row in StudentAudit table
+-- ○ The Name of User Has Inserted the New Student
+-- ○ Date
+-- ○ Note that will be like “try to delete Row with id = [Student Id]”
 CREATE TRIGGER DelStudent
 ON STUDENT
 INSTEAD OF DELETE
@@ -193,7 +220,7 @@ END
 DELETE FROM Student
 WHERE St_Id = 122300
 
---(4)
+-- Create a trigger that prevents the insertion Process for Employee table in March
 ALTER TRIGGER MarchEmp
 ON Employee
 INSTEAD OF INSERT
